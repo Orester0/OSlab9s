@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
+using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -65,19 +67,34 @@ namespace onlyServer
     class Program
     {
         private static readonly object lockObject = new object();
-        static bool subscribed = true;
+        static bool subscribed = false;
         static WeatherData currentWeather = new WeatherData();
-        static string currentCity = "varash";
+        static string currentCity = "lviv";
         static List<Tuple<string, string>> availableCities = new List<Tuple<string, string>>(){
              new Tuple<string, string>("varash", "latitude=51.3509&longitude=25.8474"),
              new Tuple<string, string>("lviv", "latitude=49.8383&longitude=24.0232"),
              new Tuple<string, string>("vinnytsia", "latitude=49.2322&longitude=28.4687"),
              new Tuple<string, string>("duisburg", "latitude=51.4325&longitude=6.7652"),
+
+
         };
+
+
+        static string connectionString = "Host=localhost; port=1488; Username=postgres;Password=zxcOrest1;Database=oslab9db";
 
 
         static void Main(string[] args)
         {
+            // BD LOCATION + 
+
+
+
+
+
+
+
+            // BD LOCATION -
+
             UpdateWeatherData();
             StartServerAsync();
 
@@ -87,6 +104,59 @@ namespace onlyServer
             {
                 // Server continues to do other tasks or can exit if needed
                 // For this example, the server does not perform any additional tasks
+            }
+        }
+
+        static void addDataToSQL(string connectionString, WeatherData weatherData)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand())
+                {
+                    cmd.Connection = connection;
+                    cmd.CommandText = "INSERT INTO WeatherData (latitude, longitude, generationtime_ms, utc_offset_seconds, timezone, timezone_abbreviation, elevation) VALUES (@Latitude, @Longitude, @GenerationTimeMs, @UtcOffsetSeconds, @Timezone, @TimezoneAbbreviation, @Elevation)";
+
+                    // Додаємо параметри
+                    cmd.Parameters.AddWithValue("@Latitude", weatherData.latitude);
+                    cmd.Parameters.AddWithValue("@Longitude", weatherData.longitude);
+                    cmd.Parameters.AddWithValue("@GenerationTimeMs", weatherData.generationtime_ms);
+                    cmd.Parameters.AddWithValue("@UtcOffsetSeconds", weatherData.utc_offset_seconds);
+                    cmd.Parameters.AddWithValue("@Timezone", weatherData.timezone);
+                    cmd.Parameters.AddWithValue("@TimezoneAbbreviation", weatherData.timezone_abbreviation);
+                    cmd.Parameters.AddWithValue("@Elevation", weatherData.elevation);
+
+                    // Виконуємо команду
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Закриваємо з'єднання
+                connection.Close();
+            }
+        }
+
+        static void getDataFromSQL(string connectionString)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                // Створюємо команду SQL для вибірки всіх даних з таблиці WeatherData
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM WeatherData", connection))
+                {
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        // Читаємо дані та виводимо їх на екран
+                        while (reader.Read())
+                        {
+                            Console.WriteLine($"Latitude: {reader["latitude"]}, Longitude: {reader["longitude"]}, GenerationTimeMs: {reader["generationtime_ms"]}, UtcOffsetSeconds: {reader["utc_offset_seconds"]}, Timezone: {reader["timezone"]}, TimezoneAbbreviation: {reader["timezone_abbreviation"]}, Elevation: {reader["elevation"]}");
+                        }
+                    }
+                }
+
+                // Закриваємо з'єднання
+                connection.Close();
             }
         }
 
@@ -111,6 +181,17 @@ namespace onlyServer
             Task<WeatherData> weatherDataTask = MakeRequestAndSaveToJson(programAPI);
             currentWeather = weatherDataTask.Result;
             Console.WriteLine("Weather data updated.");
+
+            // BD
+
+
+
+            addDataToSQL(connectionString, currentWeather);
+            Console.WriteLine("zxc");
+            getDataFromSQL(connectionString);
+
+
+            // BD
         }
 
         static async Task StartServerAsync()
