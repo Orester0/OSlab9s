@@ -18,69 +18,50 @@ namespace onlyServer
         public string timezone { get; set; }
         public string timezone_abbreviation { get; set; }
         public double elevation { get; set; }
-        public HourlyData hourly { get; set; }
+
         public HourlyUnits hourly_units { get; set; }
-
-        public class HourlyData
-        {
-            public string time_format { get; set; }
-            public List<string> time { get; set; }
-            public List<double> temperature_2m { get; set; }
-            public List<int> relative_humidity_2m { get; set; }
-            public List<int> precipitation_probability { get; set; }
-            public List<double> rain { get; set; }
-            public List<double> showers { get; set; }
-            public List<double> snowfall { get; set; }
-            public List<int> cloud_cover { get; set; }
-            public List<int> cloud_cover_low { get; set; }
-            public List<int> cloud_cover_mid { get; set; }
-            public List<int> cloud_cover_high { get; set; }
-
-            public override string ToString()
-            {
-                return $"TimeFormat: {time_format}, " +
-                       $"Time: [{string.Join(", ", time)}], " +
-                       $"Temperature2m: [{string.Join(", ", temperature_2m)}], " +
-                       $"RelativeHumidity2m: [{string.Join(", ", relative_humidity_2m)}], " +
-                       $"PrecipitationProbability: [{string.Join(", ", precipitation_probability)}], " +
-                       $"Rain: [{string.Join(", ", rain)}], " +
-                       $"Showers: [{string.Join(", ", showers)}], " +
-                       $"Snowfall: [{string.Join(", ", snowfall)}], " +
-                       $"CloudCover: [{string.Join(", ", cloud_cover)}], " +
-                       $"CloudCoverLow: [{string.Join(", ", cloud_cover_low)}], " +
-                       $"CloudCoverMid: [{string.Join(", ", cloud_cover_mid)}], " +
-                       $"CloudCoverHigh: [{string.Join(", ", cloud_cover_high)}]";
-            }
-        }
-
-        public class HourlyUnits
-        {
-            public string time { get; set; }
-            public string temperature_2m { get; set; }
-            public string relative_humidity_2m { get; set; }
-            public string precipitation_probability { get; set; }
-            public string rain { get; set; }
-            public string showers { get; set; }
-            public string snowfall { get; set; }
-            public string cloud_cover { get; set; }
-            public string cloud_cover_low { get; set; }
-            public string cloud_cover_mid { get; set; }
-            public string cloud_cover_high { get; set; }
-        }
+        public HourlyData hourly { get; set; }
 
         public override string ToString()
         {
-            return $"Latitude: {latitude}, " +
-                   $"Longitude: {longitude}, " +
-                   $"GenerationTimeMs: {generationtime_ms}, " +
-                   $"UtcOffsetSeconds: {utc_offset_seconds}, " +
-                   $"Timezone: {timezone}, " +
-                   $"TimezoneAbbreviation: {timezone_abbreviation}, " +
-                   $"Elevation: {elevation}, " +
-                   $"Hourly: {hourly}, " +
-                   $"HourlyUnits: {hourly_units}";
+            return $"Latitude: {latitude}, Longitude: {longitude}, GenerationTimeMs: {generationtime_ms}, UtcOffsetSeconds: {utc_offset_seconds}, Timezone: {timezone}, TimezoneAbbreviation: {timezone_abbreviation}, Elevation: {elevation}, \nHourlyUnits: {hourly_units}, \nHourly: {hourly}";
         }
     }
+
+    public class HourlyUnits
+    {
+        public string time { get; set; }
+        public string temperature_2m { get; set; }
+        public string relative_humidity_2m { get; set; }
+        public string apparent_temperature { get; set; }
+        public string precipitation_probability { get; set; }
+        public string weather_code { get; set; }
+        public string cloud_cover { get; set; }
+        public string wind_speed_10m { get; set; }
+
+        public override string ToString()
+        {
+            return $"Time: {time}, Temperature2m: {temperature_2m}, RelativeHumidity2m: {relative_humidity_2m}, ApparentTemperature: {apparent_temperature}, PrecipitationProbability: {precipitation_probability}, WeatherCode: {weather_code}, CloudCover: {cloud_cover}, WindSpeed10m: {wind_speed_10m}";
+        }
+    }
+
+    public class HourlyData
+    {
+        public List<string> time { get; set; }
+        public List<double> temperature_2m { get; set; }
+        public List<int> relative_humidity_2m { get; set; }
+        public List<double> apparent_temperature { get; set; }
+        public List<int> precipitation_probability { get; set; }
+        public List<int> weather_code { get; set; }
+        public List<int> cloud_cover { get; set; }
+        public List<double> wind_speed_10m { get; set; }
+
+        public override string ToString()
+        {
+            return $"Time: [{string.Join(", ", time)}], Temperature2m: [{string.Join(", ", temperature_2m)}], RelativeHumidity2m: [{string.Join(", ", relative_humidity_2m)}], ApparentTemperature: [{string.Join(", ", apparent_temperature)}], PrecipitationProbability: [{string.Join(", ", precipitation_probability)}], WeatherCode: [{string.Join(", ", weather_code)}], CloudCover: [{string.Join(", ", cloud_cover)}], WindSpeed10m: [{string.Join(", ", wind_speed_10m)}]";
+        }
+    }
+
     class Program
     {
         private static readonly object lockObject = new object();
@@ -97,8 +78,7 @@ namespace onlyServer
 
         static void Main(string[] args)
         {
-
-            Timer weatherUpdateTimer = new Timer(UpdateWeatherData, null, TimeSpan.Zero, TimeSpan.FromSeconds(20));
+            UpdateWeatherData();
             StartServerAsync();
 
             Task.Delay(1000).Wait();
@@ -110,12 +90,13 @@ namespace onlyServer
             }
         }
 
-        static void UpdateWeatherData(object state)
+        static void UpdateWeatherData()
         {
             string coordinates = availableCities
             .Where(city => city.Item1 == currentCity)
             .Select(city => city.Item2)
             .FirstOrDefault();
+
             if (coordinates != null)
             {
                 Console.WriteLine($"Значення для {currentCity} : {coordinates}");
@@ -126,7 +107,7 @@ namespace onlyServer
             }
             //string programAPI = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,showers,snowfall,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high";
 
-            string programAPI = "https://api.open-meteo.com/v1/forecast?" + coordinates + "&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,showers,snowfall,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&forecast_days=1";
+            string programAPI = "https://api.open-meteo.com/v1/forecast?" + coordinates + "&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,cloud_cover,wind_speed_10m&forecast_days=1";
             Task<WeatherData> weatherDataTask = MakeRequestAndSaveToJson(programAPI);
             currentWeather = weatherDataTask.Result;
             Console.WriteLine("Weather data updated.");
@@ -188,7 +169,7 @@ namespace onlyServer
                                                 writer.WriteLine("City changed");
                                                 writer.Flush();
                                                 Console.WriteLine($"Client changed city to {city}");
-                                                UpdateWeatherData(currentCity);
+                                                UpdateWeatherData();
                                             }
                                             else
                                             {
