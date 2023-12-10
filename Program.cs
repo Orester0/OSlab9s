@@ -80,21 +80,9 @@ namespace onlyServer
         };
 
 
-        static string connectionString = "Host=localhost; port=1488; Username=postgres;Password=zxcOrest1;Database=oslab9db";
-
-
         static void Main(string[] args)
         {
-            // BD LOCATION + 
-
-
-
-
-
-
-
-            // BD LOCATION -
-
+          
             UpdateWeatherData();
             StartServerAsync();
 
@@ -104,59 +92,6 @@ namespace onlyServer
             {
                 // Server continues to do other tasks or can exit if needed
                 // For this example, the server does not perform any additional tasks
-            }
-        }
-
-        static void addDataToSQL(string connectionString, WeatherData weatherData)
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                using (NpgsqlCommand cmd = new NpgsqlCommand())
-                {
-                    cmd.Connection = connection;
-                    cmd.CommandText = "INSERT INTO WeatherData (latitude, longitude, generationtime_ms, utc_offset_seconds, timezone, timezone_abbreviation, elevation) VALUES (@Latitude, @Longitude, @GenerationTimeMs, @UtcOffsetSeconds, @Timezone, @TimezoneAbbreviation, @Elevation)";
-
-                    // Додаємо параметри
-                    cmd.Parameters.AddWithValue("@Latitude", weatherData.latitude);
-                    cmd.Parameters.AddWithValue("@Longitude", weatherData.longitude);
-                    cmd.Parameters.AddWithValue("@GenerationTimeMs", weatherData.generationtime_ms);
-                    cmd.Parameters.AddWithValue("@UtcOffsetSeconds", weatherData.utc_offset_seconds);
-                    cmd.Parameters.AddWithValue("@Timezone", weatherData.timezone);
-                    cmd.Parameters.AddWithValue("@TimezoneAbbreviation", weatherData.timezone_abbreviation);
-                    cmd.Parameters.AddWithValue("@Elevation", weatherData.elevation);
-
-                    // Виконуємо команду
-                    cmd.ExecuteNonQuery();
-                }
-
-                // Закриваємо з'єднання
-                connection.Close();
-            }
-        }
-
-        static void getDataFromSQL(string connectionString)
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                // Створюємо команду SQL для вибірки всіх даних з таблиці WeatherData
-                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM WeatherData", connection))
-                {
-                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        // Читаємо дані та виводимо їх на екран
-                        while (reader.Read())
-                        {
-                            Console.WriteLine($"Latitude: {reader["latitude"]}, Longitude: {reader["longitude"]}, GenerationTimeMs: {reader["generationtime_ms"]}, UtcOffsetSeconds: {reader["utc_offset_seconds"]}, Timezone: {reader["timezone"]}, TimezoneAbbreviation: {reader["timezone_abbreviation"]}, Elevation: {reader["elevation"]}");
-                        }
-                    }
-                }
-
-                // Закриваємо з'єднання
-                connection.Close();
             }
         }
 
@@ -182,16 +117,6 @@ namespace onlyServer
             currentWeather = weatherDataTask.Result;
             Console.WriteLine("Weather data updated.");
 
-            // BD
-
-
-
-            addDataToSQL(connectionString, currentWeather);
-            Console.WriteLine("zxc");
-            getDataFromSQL(connectionString);
-
-
-            // BD
         }
 
         static async Task StartServerAsync()
@@ -286,6 +211,7 @@ namespace onlyServer
                             catch (IOException)
                             {
                                 Console.WriteLine("Client disconnected. Waiting for reconnection...");
+                                
                                 break;
                             }
                         }
@@ -293,9 +219,6 @@ namespace onlyServer
                 }
             }
         }
-
-
-
 
         static async Task<WeatherData> MakeRequestAndSaveToJson(string apiUrl)
         {
