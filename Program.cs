@@ -187,7 +187,33 @@ namespace onlyServer
             DataTable res = SearchInDatabase(connectionString);
             if (res.Rows.Count > 0)
             {
-                Console.WriteLine("find");
+                Console.WriteLine("Found data in the database.");
+
+                DataRow row = res.Rows[0]; // Отримати перший рядок (припускається, що результат один рядок)
+                currentWeather = new WeatherData
+                {
+                    latitude = Convert.ToDouble(row["latitude"]),
+                    longitude = Convert.ToDouble(row["longitude"]),
+                    generationtime_ms = Convert.ToDouble(row["generationtime_ms"]),
+                    utc_offset_seconds = Convert.ToInt32(row["utc_offset_seconds"]),
+                    timezone = Convert.ToString(row["timezone"]),
+                    timezone_abbreviation = Convert.ToString(row["timezone_abbreviation"]),
+                    elevation = Convert.ToDouble(row["elevation"]),
+                    сity = Convert.ToString(row["city"]),
+                    requestTime = Convert.ToDateTime(row["date_time"]), // Отримати дату і час з бази даних
+                    hourly_units = new HourlyUnits
+                    {
+                        temperature_2m = Convert.ToString(row["temperature_2m"]),
+                        relative_humidity_2m = Convert.ToString(row["relative_humidity_2m"]),
+                        apparent_temperature = Convert.ToString(row["apparent_temperature"]),
+                        precipitation_probability = Convert.ToString(row["precipitation_probability"]),
+                        weather_code = Convert.ToString(row["weather_code"]),
+                        cloud_cover = Convert.ToString(row["cloud_cover"]),
+                        wind_speed_10m = Convert.ToString(row["wind_speed_10m"]),
+                    }
+                };
+
+                Console.WriteLine("Weather data loaded from the database.");
             }
             else
             {
@@ -209,7 +235,6 @@ namespace onlyServer
                 currentWeather.сity = currentCity;
                 Console.WriteLine("Weather data updated.");
                 addDataToSQL(connectionString, currentWeather);
-                res = SearchInDatabase(connectionString);
                 Console.WriteLine(requestTime);
             }
             //getDataFromSQL(connectionString);
