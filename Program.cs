@@ -8,6 +8,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Data;
 
 namespace onlyServer
 {
@@ -20,6 +21,9 @@ namespace onlyServer
         public string timezone { get; set; }
         public string timezone_abbreviation { get; set; }
         public double elevation { get; set; }
+        public string сity { get; set; }
+
+        public DateTime requestTime { get; set; }
 
         public HourlyUnits hourly_units { get; set; }
         public HourlyData hourly { get; set; }
@@ -28,6 +32,7 @@ namespace onlyServer
         {
             return $"Latitude: {latitude}, Longitude: {longitude}, GenerationTimeMs: {generationtime_ms}, UtcOffsetSeconds: {utc_offset_seconds}, Timezone: {timezone}, TimezoneAbbreviation: {timezone_abbreviation}, Elevation: {elevation}, \nHourlyUnits: {hourly_units}, \nHourly: {hourly}";
         }
+
     }
 
     public class HourlyUnits
@@ -69,7 +74,8 @@ namespace onlyServer
         private static readonly object lockObject = new object();
         static bool subscribed = false;
         static WeatherData currentWeather = new WeatherData();
-        static string currentCity = "lviv";
+        static string currentCity = "duisburg";
+        static DateTime requestTime;
         static List<Tuple<string, string>> availableCities = new List<Tuple<string, string>>(){
              new Tuple<string, string>("varash", "latitude=51.3509&longitude=25.8474"),
              new Tuple<string, string>("lviv", "latitude=49.8383&longitude=24.0232"),
@@ -80,9 +86,21 @@ namespace onlyServer
         };
 
 
+        static string connectionString = "Host=localhost; port=5432; Username=postgres;Password=1w2e3r4t5y;Database=WeatherData";
+
+
         static void Main(string[] args)
         {
-          
+            // BD LOCATION + 
+
+
+
+
+
+
+
+            // BD LOCATION -
+
             UpdateWeatherData();
             StartServerAsync();
 
@@ -95,6 +113,69 @@ namespace onlyServer
             }
         }
 
+        static void addDataToSQL(string connectionString, WeatherData weatherData)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand())
+                {
+                    cmd.Connection = connection;
+                    cmd.CommandText = "INSERT INTO WD (latitude, longitude, generationtime_ms, utc_offset_seconds, timezone, timezone_abbreviation, elevation,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,date_time,city) VALUES (@Latitude, @Longitude, @GenerationTimeMs, @UtcOffsetSeconds, @Timezone, @TimezoneAbbreviation, @Elevation,@temperature_2m,@relative_humidity_2m,@apparent_temperature,@precipitation_probability,@weather_code,@cloud_cover,@wind_speed_10m,@requestTime,@city)";
+
+                    // Додаємо параметри
+                    cmd.Parameters.AddWithValue("@Latitude", weatherData.latitude);
+                    cmd.Parameters.AddWithValue("@Longitude", weatherData.longitude);
+                    cmd.Parameters.AddWithValue("@GenerationTimeMs", weatherData.generationtime_ms);
+                    cmd.Parameters.AddWithValue("@UtcOffsetSeconds", weatherData.utc_offset_seconds);
+                    cmd.Parameters.AddWithValue("@Timezone", weatherData.timezone);
+                    cmd.Parameters.AddWithValue("@TimezoneAbbreviation", weatherData.timezone_abbreviation);
+                    cmd.Parameters.AddWithValue("@temperature_2m", weatherData.hourly.temperature_2m);
+                    cmd.Parameters.AddWithValue("@relative_humidity_2m", weatherData.hourly.relative_humidity_2m);
+                    cmd.Parameters.AddWithValue("@apparent_temperature", weatherData.hourly.apparent_temperature);
+                    cmd.Parameters.AddWithValue("@precipitation_probability", weatherData.hourly.precipitation_probability);
+                    cmd.Parameters.AddWithValue("@weather_code", weatherData.hourly.weather_code);
+                    cmd.Parameters.AddWithValue("@cloud_cover", weatherData.hourly.cloud_cover);
+                    cmd.Parameters.AddWithValue("@wind_speed_10m", weatherData.hourly.wind_speed_10m);
+                    cmd.Parameters.AddWithValue("@Elevation", weatherData.elevation);
+                    cmd.Parameters.AddWithValue("@requestTime", weatherData.requestTime);
+                    cmd.Parameters.AddWithValue("@city", weatherData.сity);
+
+                    // Виконуємо команду
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Закриваємо з'єднання
+                connection.Close();
+
+            }
+        }
+
+        static void getDataFromSQL(string connectionString)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                // Створюємо команду SQL для вибірки всіх даних з таблиці WeatherData
+                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM WeatherData", connection))
+                {
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        // Читаємо дані та виводимо їх на екран
+                        while (reader.Read())
+                        {
+                            Console.WriteLine($"Latitude: {reader["latitude"]}, Longitude: {reader["longitude"]}, GenerationTimeMs: {reader["generationtime_ms"]}, UtcOffsetSeconds: {reader["utc_offset_seconds"]}, Timezone: {reader["timezone"]}, TimezoneAbbreviation: {reader["timezone_abbreviation"]}, Elevation: {reader["elevation"]}");
+                        }
+                    }
+                }
+
+                // Закриваємо з'єднання
+                connection.Close();
+            }
+        }
+
         static void UpdateWeatherData()
         {
             string coordinates = availableCities
@@ -102,21 +183,39 @@ namespace onlyServer
             .Select(city => city.Item2)
             .FirstOrDefault();
 
-            if (coordinates != null)
+            requestTime = DateTime.Now;
+            DataTable res = SearchInDatabase(connectionString);
+            if (res.Rows.Count > 0)
             {
-                Console.WriteLine($"Значення для {currentCity} : {coordinates}");
+                Console.WriteLine("find");
             }
             else
             {
-                Console.WriteLine($"Місто {currentCity} не знайдено.");
+
+                if (coordinates != null)
+                {
+                    Console.WriteLine($"Значення для {currentCity} : {coordinates}");
+                }
+                else
+                {
+                    Console.WriteLine($"Місто {currentCity} не знайдено.");
+                }
+                //string programAPI = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,showers,snowfall,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high";
+
+                string programAPI = "https://api.open-meteo.com/v1/forecast?" + coordinates + "&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,cloud_cover,wind_speed_10m&forecast_days=1";
+                Task<WeatherData> weatherDataTask = MakeRequestAndSaveToJson(programAPI);
+                currentWeather = weatherDataTask.Result;
+                currentWeather.requestTime = requestTime;
+                currentWeather.сity = currentCity;
+                Console.WriteLine("Weather data updated.");
+                addDataToSQL(connectionString, currentWeather);
+                res = SearchInDatabase(connectionString);
+                Console.WriteLine(requestTime);
             }
-            //string programAPI = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,showers,snowfall,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high";
+            //getDataFromSQL(connectionString);
 
-            string programAPI = "https://api.open-meteo.com/v1/forecast?" + coordinates + "&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,cloud_cover,wind_speed_10m&forecast_days=1";
-            Task<WeatherData> weatherDataTask = MakeRequestAndSaveToJson(programAPI);
-            currentWeather = weatherDataTask.Result;
-            Console.WriteLine("Weather data updated.");
 
+            // BD
         }
 
         static async Task StartServerAsync()
@@ -211,7 +310,7 @@ namespace onlyServer
                             catch (IOException)
                             {
                                 Console.WriteLine("Client disconnected. Waiting for reconnection...");
-                                
+
                                 break;
                             }
                         }
@@ -219,6 +318,9 @@ namespace onlyServer
                 }
             }
         }
+
+
+
 
         static async Task<WeatherData> MakeRequestAndSaveToJson(string apiUrl)
         {
@@ -242,6 +344,33 @@ namespace onlyServer
             }
         }
 
+        static DataTable SearchInDatabase(string connectionString)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
 
+                using (NpgsqlCommand command = new NpgsqlCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = "SELECT * FROM WD WHERE DATE_PART('year', date_time) = @YearToSearch AND DATE_PART('month', date_time) = @MonthToSearch AND DATE_PART('day', date_time) = @DayToSearch AND city = @CityToSearch";
+
+                    command.Parameters.AddWithValue("@YearToSearch", requestTime.Year);
+                    command.Parameters.AddWithValue("@MonthToSearch", requestTime.Month);
+                    command.Parameters.AddWithValue("@DayToSearch", requestTime.Day);
+                    command.Parameters.AddWithValue("@CityToSearch", currentCity);
+
+                    using (NpgsqlDataAdapter adapter = new NpgsqlDataAdapter(command))
+                    {
+                        DataTable dataTable = new DataTable();
+                        adapter.Fill(dataTable);
+
+                        return dataTable;
+                    }
+                }
+            }
+        }
     }
+
+
 }
