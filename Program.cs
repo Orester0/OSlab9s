@@ -73,15 +73,6 @@ namespace onlyServer
 
         static void Main(string[] args)
         {
-            // BD LOCATION + 
-
-
-
-
-
-
-
-            // BD LOCATION -
 
             UpdateWeatherData();
             StartServerAsync();
@@ -278,8 +269,19 @@ namespace onlyServer
                                         if (index != -1 && index < line.Length - 1)
                                         {
                                             city = line.Substring(index + 1);
-                                            if (city.ToLower() == "varash" || city.ToLower() == "lviv" ||
-                                            city.ToLower() == "vinnytsia" || city.ToLower() == "duisburg")
+
+                                            bool cityExists = false;
+
+                                            foreach(var i in availableCities)
+                                            {
+                                                if(i.Item1.ToLower() == city.ToLower())
+                                                {
+                                                    cityExists = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if (cityExists)
                                             {
                                                 currentCity = city;
                                                 writer.WriteLine("City changed");
@@ -385,3 +387,4 @@ namespace onlyServer
 
 
 }
+//4
