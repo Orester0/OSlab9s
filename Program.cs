@@ -25,31 +25,13 @@ namespace onlyServer
 
         public DateTime requestTime { get; set; }
 
-        public HourlyUnits hourly_units { get; set; }
         public HourlyData hourly { get; set; }
 
         public override string ToString()
         {
-            return $"Latitude: {latitude}, Longitude: {longitude}, GenerationTimeMs: {generationtime_ms}, UtcOffsetSeconds: {utc_offset_seconds}, Timezone: {timezone}, TimezoneAbbreviation: {timezone_abbreviation}, Elevation: {elevation}, \nHourlyUnits: {hourly_units}, \nHourly: {hourly}";
+            return $"Latitude: {latitude}, Longitude: {longitude}, GenerationTimeMs: {generationtime_ms}, UtcOffsetSeconds: {utc_offset_seconds}, Timezone: {timezone}, TimezoneAbbreviation: {timezone_abbreviation}, Elevation: {elevation}, City: {сity}, DateTime: {requestTime}, Hourly: {hourly}";
         }
 
-    }
-
-    public class HourlyUnits
-    {
-        public string time { get; set; }
-        public string temperature_2m { get; set; }
-        public string relative_humidity_2m { get; set; }
-        public string apparent_temperature { get; set; }
-        public string precipitation_probability { get; set; }
-        public string weather_code { get; set; }
-        public string cloud_cover { get; set; }
-        public string wind_speed_10m { get; set; }
-
-        public override string ToString()
-        {
-            return $"Time: {time}, Temperature2m: {temperature_2m}, RelativeHumidity2m: {relative_humidity_2m}, ApparentTemperature: {apparent_temperature}, PrecipitationProbability: {precipitation_probability}, WeatherCode: {weather_code}, CloudCover: {cloud_cover}, WindSpeed10m: {wind_speed_10m}";
-        }
     }
 
     public class HourlyData
@@ -65,7 +47,7 @@ namespace onlyServer
 
         public override string ToString()
         {
-            return $"Time: [{string.Join(", ", time)}], Temperature2m: [{string.Join(", ", temperature_2m)}], RelativeHumidity2m: [{string.Join(", ", relative_humidity_2m)}], ApparentTemperature: [{string.Join(", ", apparent_temperature)}], PrecipitationProbability: [{string.Join(", ", precipitation_probability)}], WeatherCode: [{string.Join(", ", weather_code)}], CloudCover: [{string.Join(", ", cloud_cover)}], WindSpeed10m: [{string.Join(", ", wind_speed_10m)}]";
+            return $" Temperature2m: [{string.Join(", ", temperature_2m)}], RelativeHumidity2m: [{string.Join(", ", relative_humidity_2m)}], ApparentTemperature: [{string.Join(", ", apparent_temperature)}], PrecipitationProbability: [{string.Join(", ", precipitation_probability)}], WeatherCode: [{string.Join(", ", weather_code)}], CloudCover: [{string.Join(", ", cloud_cover)}], WindSpeed10m: [{string.Join(", ", wind_speed_10m)}]";
         }
     }
 
@@ -189,7 +171,10 @@ namespace onlyServer
             {
                 Console.WriteLine("Found data in the database.");
 
-                DataRow row = res.Rows[0]; // Отримати перший рядок (припускається, що результат один рядок)
+                DataRow row = res.Rows[0];
+                int temperature_2mIndex = res.Columns.IndexOf("temperature_2m");
+
+               
                 currentWeather = new WeatherData
                 {
                     latitude = Convert.ToDouble(row["latitude"]),
@@ -201,18 +186,19 @@ namespace onlyServer
                     elevation = Convert.ToDouble(row["elevation"]),
                     сity = Convert.ToString(row["city"]),
                     requestTime = Convert.ToDateTime(row["date_time"]), // Отримати дату і час з бази даних
-                    hourly_units = new HourlyUnits
-                    {
-                        temperature_2m = Convert.ToString(row["temperature_2m"]),
-                        relative_humidity_2m = Convert.ToString(row["relative_humidity_2m"]),
-                        apparent_temperature = Convert.ToString(row["apparent_temperature"]),
-                        precipitation_probability = Convert.ToString(row["precipitation_probability"]),
-                        weather_code = Convert.ToString(row["weather_code"]),
-                        cloud_cover = Convert.ToString(row["cloud_cover"]),
-                        wind_speed_10m = Convert.ToString(row["wind_speed_10m"]),
-                    }
-                };
 
+                   hourly = new HourlyData
+                    {
+                       temperature_2m = row.Field<double[]>(temperature_2mIndex)?.ToList() ?? new List<double>(),// Перевірте, чи поле "temperature_2m" має правильний тип (List<double>)
+                       relative_humidity_2m = row.Field<int[]>("relative_humidity_2m")?.ToList() ?? new List<int>(),
+                       apparent_temperature = row.Field<double[]>("apparent_temperature")?.ToList() ?? new List<double>(),
+                       precipitation_probability = row.Field<int[]>("precipitation_probability")?.ToList() ?? new List<int>(),
+                       weather_code = row.Field<int[]>("weather_code")?.ToList() ?? new List<int>(),
+                       cloud_cover = row.Field<int[]>("cloud_cover")?.ToList() ?? new List<int>(),
+                       wind_speed_10m = row.Field<double[]>("wind_speed_10m")?.ToList() ?? new List<double>(),
+                   }
+                };
+                Console.WriteLine(currentWeather);
                 Console.WriteLine("Weather data loaded from the database.");
             }
             else
