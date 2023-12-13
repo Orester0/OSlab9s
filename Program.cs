@@ -97,7 +97,7 @@ namespace onlyServer
                     cmd.Connection = connection;
                     cmd.CommandText = "INSERT INTO WD (latitude, longitude, generationtime_ms, utc_offset_seconds, timezone, timezone_abbreviation, elevation,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,date_time,city) VALUES (@Latitude, @Longitude, @GenerationTimeMs, @UtcOffsetSeconds, @Timezone, @TimezoneAbbreviation, @Elevation,@temperature_2m,@relative_humidity_2m,@apparent_temperature,@precipitation_probability,@weather_code,@cloud_cover,@wind_speed_10m,@requestTime,@city)";
 
-                    // Додаємо параметри
+                   
                     cmd.Parameters.AddWithValue("@Latitude", weatherData.latitude);
                     cmd.Parameters.AddWithValue("@Longitude", weatherData.longitude);
                     cmd.Parameters.AddWithValue("@GenerationTimeMs", weatherData.generationtime_ms);
@@ -115,40 +115,17 @@ namespace onlyServer
                     cmd.Parameters.AddWithValue("@requestTime", weatherData.requestTime);
                     cmd.Parameters.AddWithValue("@city", weatherData.сity);
 
-                    // Виконуємо команду
+                  
                     cmd.ExecuteNonQuery();
                 }
 
-                // Закриваємо з'єднання
+               
                 connection.Close();
 
             }
         }
 
-        static void getDataFromSQL(string connectionString)
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                // Створюємо команду SQL для вибірки всіх даних з таблиці WeatherData
-                using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT * FROM WeatherData", connection))
-                {
-                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        // Читаємо дані та виводимо їх на екран
-                        while (reader.Read())
-                        {
-                            Console.WriteLine($"Latitude: {reader["latitude"]}, Longitude: {reader["longitude"]}, GenerationTimeMs: {reader["generationtime_ms"]}, UtcOffsetSeconds: {reader["utc_offset_seconds"]}, Timezone: {reader["timezone"]}, TimezoneAbbreviation: {reader["timezone_abbreviation"]}, Elevation: {reader["elevation"]}");
-                        }
-                    }
-                }
-
-                // Закриваємо з'єднання
-                connection.Close();
-            }
-        }
-
+       
         static void UpdateWeatherData()
         {
             string coordinates = availableCities
@@ -176,11 +153,11 @@ namespace onlyServer
                     timezone_abbreviation = Convert.ToString(row["timezone_abbreviation"]),
                     elevation = Convert.ToDouble(row["elevation"]),
                     сity = Convert.ToString(row["city"]),
-                    requestTime = Convert.ToDateTime(row["date_time"]), // Отримати дату і час з бази даних
+                    requestTime = Convert.ToDateTime(row["date_time"]), 
 
                    hourly = new HourlyData
                     {
-                       temperature_2m = row.Field<double[]>(temperature_2mIndex)?.ToList() ?? new List<double>(),// Перевірте, чи поле "temperature_2m" має правильний тип (List<double>)
+                       temperature_2m = row.Field<double[]>(temperature_2mIndex)?.ToList() ?? new List<double>(),
                        relative_humidity_2m = row.Field<int[]>("relative_humidity_2m")?.ToList() ?? new List<int>(),
                        apparent_temperature = row.Field<double[]>("apparent_temperature")?.ToList() ?? new List<double>(),
                        precipitation_probability = row.Field<int[]>("precipitation_probability")?.ToList() ?? new List<int>(),
@@ -214,10 +191,7 @@ namespace onlyServer
                 addDataToSQL(connectionString, currentWeather);
                 Console.WriteLine(requestTime);
             }
-            //getDataFromSQL(connectionString);
-
-
-            // BD
+           
         }
 
         static async Task StartServerAsync()
@@ -233,6 +207,7 @@ namespace onlyServer
                     {
                         while (server.IsConnected)
                         {
+                            Console.WriteLine("conected");
                             try
                             {
                                 var line = reader.ReadLine();
@@ -352,7 +327,7 @@ namespace onlyServer
                 catch (HttpRequestException e)
                 {
                     Console.WriteLine($"Помилка при виконанні запиту: {e.Message}");
-                    return null; // або можна повернути пусті рядки або інші значущі помилки
+                    return null; 
                 }
             }
         }
@@ -387,4 +362,4 @@ namespace onlyServer
 
 
 }
-//4
+
