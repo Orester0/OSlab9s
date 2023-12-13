@@ -201,9 +201,10 @@ namespace onlyServer
                 using (var server = new NamedPipeServerStream("WeatherApp"))
                 {
                     await server.WaitForConnectionAsync();
-
+                    DateTime currentDateTime = DateTime.Now;
                     using (StreamReader reader = new StreamReader(server))
                     using (StreamWriter writer = new StreamWriter(server))
+                    using (StreamWriter file = new StreamWriter("log.txt", true))
                     {
                         while (server.IsConnected)
                         {
@@ -216,23 +217,29 @@ namespace onlyServer
                                 {
                                     if (line == null)
                                     {
+                                        file.WriteLine(currentDateTime + "Client disconnect");
                                         Console.WriteLine("Client disconnected. Waiting for reconnection...");
                                         break;
                                     }
 
                                     if (line.ToLower() == "exit")
                                     {
+                                        file.WriteLine(currentDateTime + "Client request exit");
+
                                         Console.WriteLine("Client requested exit");
                                         break;
                                     }
                                     else if (line.ToLower() == "subscribe")
                                     {
+                                        file.WriteLine(currentDateTime + "Client subscribed");
                                         Console.WriteLine("Client subscribed");
                                         subscribed = true;
 
                                     }
                                     else if (line.ToLower() == "unsubscribe")
                                     {
+                                        file.WriteLine(currentDateTime + "Client unsubscribed");
+
                                         Console.WriteLine("Client unsubscribed");
                                         subscribed = false;
 
@@ -262,11 +269,14 @@ namespace onlyServer
                                                 writer.WriteLine("City changed");
                                                 writer.Flush();
                                                 Console.WriteLine($"Client changed city to {city}");
+                                                file.WriteLine(currentDateTime + $"Client changed city to {city}");
                                                 UpdateWeatherData();
                                             }
                                             else
                                             {
                                                 writer.WriteLine("Wrong city. Request cancelled");
+                                                file.WriteLine(currentDateTime + "Wrong city request");
+
                                                 writer.Flush();
                                             }
                                         }
@@ -284,10 +294,13 @@ namespace onlyServer
                                             string output = JsonConvert.SerializeObject(currentWeather);
                                             Console.WriteLine("Client got data");
                                             writer.WriteLine(output);
+                                            file.WriteLine(currentDateTime + "Client got data");
+
                                             writer.Flush();
                                         }
                                         else
                                         {
+                                            file.WriteLine(currentDateTime + "Client is not subscribed to get data");
                                             Console.WriteLine("Client is not subscribed");
                                             writer.WriteLine("You are not subscribed");
                                             writer.Flush();
